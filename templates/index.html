@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>NutriBot — AI Nutrition Assistant | IBM Granite</title>
+<style>
+/* ── Reset ─────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI",system-ui,sans-serif;background:#f0f4f8;color:#1f2328;min-height:100vh}
+
+/* ── Header ────────────────────────────────────────── */
+header{background:linear-gradient(135deg,#145530 0%,#22863a 60%,#2ea043 100%);color:#fff;padding:16px 32px;display:flex;align-items:center;gap:14px;box-shadow:0 3px 12px rgba(0,0,0,.2)}
+.logo-wrap{width:46px;height:46px;background:rgba(255,255,255,.18);border-radius:12px;display:grid;place-items:center;font-size:1.6rem;flex-shrink:0}
+.hdr-text h1{font-size:1.4rem;font-weight:700;letter-spacing:-.3px}
+.hdr-text p{font-size:.8rem;opacity:.82;margin-top:2px}
+.ibm-badge{margin-left:auto;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:6px 16px;font-size:.78rem;font-weight:700;letter-spacing:.4px;white-space:nowrap}
+
+/* ── Layout ────────────────────────────────────────── */
+.container{max-width:1120px;margin:0 auto;padding:28px 18px}
+
+/* ── Tabs ──────────────────────────────────────────── */
+.tabs{display:flex;gap:3px;background:#dde3ea;border-radius:10px;padding:4px;width:fit-content;margin-bottom:26px;flex-wrap:wrap}
+.tab-btn{padding:9px 20px;border:none;border-radius:7px;background:transparent;cursor:pointer;font-size:.9rem;font-weight:600;color:#57606a;transition:all .18s}
+.tab-btn.active{background:#fff;color:#145530;box-shadow:0 1px 5px rgba(0,0,0,.1)}
+.tab-pane{display:none}.tab-pane.active{display:block}
+
+/* ── Cards ─────────────────────────────────────────── */
+.card{background:#fff;border-radius:14px;padding:26px 28px;box-shadow:0 1px 6px rgba(0,0,0,.07);margin-bottom:22px}
+.card-title{font-size:1.05rem;font-weight:700;color:#145530;margin-bottom:18px;padding-bottom:10px;border-bottom:2px solid #e8f5ee;display:flex;align-items:center;gap:8px}
+
+/* ── Grid ──────────────────────────────────────────── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.col-span{grid-column:1/-1}
+@media(max-width:680px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+/* ── Form Elements ─────────────────────────────────── */
+.fg{display:flex;flex-direction:column;gap:5px}
+label{font-size:.82rem;font-weight:600;color:#444d56}
+input[type=text],input[type=number],select,textarea{border:1.5px solid #d0d7de;border-radius:8px;padding:9px 13px;font-size:.93rem;color:#1f2328;background:#fafbfc;transition:border-color .18s;font-family:inherit;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#22863a;background:#fff;box-shadow:0 0 0 3px rgba(34,134,58,.1)}
+textarea{resize:vertical;min-height:72px}
+.required-star{color:#cf222e}
+
+/* ── Buttons ───────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 24px;border:none;border-radius:8px;font-size:.93rem;font-weight:600;cursor:pointer;transition:all .18s;font-family:inherit}
+.btn-primary{background:#145530;color:#fff}.btn-primary:hover{background:#0d3b22}
+.btn-primary:disabled{background:#7baa8c;cursor:not-allowed}
+.btn-secondary{background:#f3f4f6;color:#374151;border:1px solid #d0d7de}.btn-secondary:hover{background:#e5e7eb}
+.btn-outline{background:transparent;color:#145530;border:1.5px solid #22863a}.btn-outline:hover{background:#f0fdf4}
+.btn-sm{padding:7px 16px;font-size:.84rem}
+.btn-row{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;align-items:center}
+
+/* ── Stats Row ─────────────────────────────────────── */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.stat-box{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:16px 18px;text-align:center}
+.stat-box .val{font-size:1.6rem;font-weight:800;color:#145530}
+.stat-box .lbl{font-size:.78rem;color:#57606a;margin-top:3px}
+.stat-box .sub{font-size:.82rem;font-weight:600;margin-top:2px}
+@media(max-width:500px){.stats-row{grid-template-columns:1fr}}
+
+/* ── Output ────────────────────────────────────────── */
+.output-card{display:none}.output-card.visible{display:block}
+.output-body{background:#f8fdfb;border:1.5px solid #c6e6d4;border-radius:10px;padding:22px 24px;line-height:1.8;font-size:.94rem}
+.output-body h1,.output-body h2,.output-body h3{color:#145530;margin:14px 0 6px}
+.output-body h1{font-size:1.2rem}.output-body h2{font-size:1.05rem}.output-body h3{font-size:.98rem}
+.output-body ul,.output-body ol{padding-left:22px;margin:6px 0}
+.output-body li{margin-bottom:4px}
+.output-body strong{color:#0d3b22}
+.output-body em{color:#555}
+.output-body hr{border:none;border-top:1px solid #c6e6d4;margin:16px 0}
+.output-body blockquote{border-left:3px solid #22863a;padding-left:14px;color:#555;font-style:italic;margin:10px 0}
+
+/* ── Chat ──────────────────────────────────────────── */
+.chat-window{background:#f8fdfb;border:1.5px solid #c6e6d4;border-radius:10px;height:380px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;margin-bottom:14px;scroll-behavior:smooth}
+.msg{max-width:82%;padding:11px 15px;border-radius:14px;font-size:.9rem;line-height:1.65;white-space:pre-wrap}
+.msg.user{background:#145530;color:#fff;align-self:flex-end;border-bottom-right-radius:3px}
+.msg.bot{background:#fff;border:1px solid #d0e8d8;align-self:flex-start;border-bottom-left-radius:3px}
+.msg.bot .bot-tag{font-size:.72rem;font-weight:700;color:#145530;margin-bottom:5px}
+.msg.typing{background:#e8f5ee;color:#57606a;font-style:italic;font-size:.86rem;align-self:flex-start}
+.chat-row{display:flex;gap:10px}
+.chat-row input{flex:1;padding:11px 15px;border-radius:8px;border:1.5px solid #d0d7de;font-size:.93rem;font-family:inherit}
+.chat-row input:focus{outline:none;border-color:#22863a}
+
+/* ── Suggested Questions ───────────────────────────── */
+.suggestions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.suggest-btn{background:#e8f5ee;border:1px solid #bbf7d0;border-radius:20px;padding:6px 14px;font-size:.8rem;cursor:pointer;color:#145530;font-weight:500;transition:background .15s;font-family:inherit}
+.suggest-btn:hover{background:#d1fae5}
+
+/* ── BMI Section ───────────────────────────────────── */
+.bmi-bar-wrap{margin-top:10px}
+.bmi-bar{height:14px;border-radius:7px;background:linear-gradient(to right,#3b82f6 0%,#22c55e 18.5%,#22c55e 25%,#f59e0b 25%,#f59e0b 30%,#ef4444 30%,#ef4444 100%);position:relative;overflow:visible}
+.bmi-pointer{position:absolute;top:-5px;width:4px;height:24px;background:#1f2328;border-radius:2px;transform:translateX(-50%);transition:left .4s ease}
+.bmi-labels{display:flex;justify-content:space-between;font-size:.72rem;color:#57606a;margin-top:5px}
+.bmi-cat-badge{display:inline-block;padding:3px 12px;border-radius:12px;font-size:.8rem;font-weight:700;margin-top:8px}
+.bmi-cat-badge.underweight{background:#dbeafe;color:#1d4ed8}
+.bmi-cat-badge.normal{background:#dcfce7;color:#166534}
+.bmi-cat-badge.overweight{background:#fef9c3;color:#854d0e}
+.bmi-cat-badge.obese{background:#fee2e2;color:#991b1b}
+
+/* ── Spinner ───────────────────────────────────────── */
+.spin{display:none;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:rot .65s linear infinite}
+.spin.dark{border-color:rgba(20,85,48,.2);border-top-color:#145530}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* ── Alerts ────────────────────────────────────────── */
+.alert{padding:10px 15px;border-radius:8px;font-size:.88rem;margin-top:12px;display:none}
+.alert.err{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+.alert.ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
+.alert.warn{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+
+/* ── Info Banner ───────────────────────────────────── */
+.info-banner{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:11px 15px;font-size:.84rem;color:#78350f;margin-bottom:18px;display:flex;gap:8px;align-items:flex-start;line-height:1.5}
+
+/* ── Recipe ────────────────────────────────────────── */
+.recipe-output{background:#f8fdfb;border:1.5px solid #c6e6d4;border-radius:10px;padding:20px 22px;margin-top:16px;display:none}
+.recipe-output.visible{display:block}
+.recipe-output pre{white-space:pre-wrap;font-size:.9rem;line-height:1.75;font-family:inherit}
+
+/* ── About Table ───────────────────────────────────── */
+.about-table{width:100%;border-collapse:collapse;font-size:.9rem;margin-top:14px}
+.about-table th,.about-table td{padding:10px 14px;border:1px solid #e5e7eb;text-align:left}
+.about-table th{background:#f0fdf4;color:#145530;font-weight:700}
+.about-table tr:nth-child(even) td{background:#fafbfc}
+
+/* ── Disclaimer Box ────────────────────────────────── */
+.disclaimer{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px 18px;font-size:.84rem;color:#7f1d1d;line-height:1.6;margin-top:16px}
+
+/* ── Print ─────────────────────────────────────────── */
+@media print{
+  header,nav,.tabs,.btn-row,.chat-window,.chat-row,.suggestions,.info-banner,.recipe-card,#tab-recipe,#tab-chat,#tab-about,.ibm-badge{display:none!important}
+  .output-card{display:block!important}
+  .output-body{border:none;padding:0;background:#fff}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ─────────────────────────────────────── -->
+<header>
+  <div class="logo-wrap">🥗</div>
+  <div class="hdr-text">
+    <h1>NutriBot — Personalized Nutrition AI</h1>
+    <p>Agentic AI · IBM Granite LLM · Ethical · Evidence-Based · HAM Principles</p>
+  </div>
+  <span class="ibm-badge">⚡ IBM watsonx.ai</span>
+</header>
+
+<div class="container">
+
+  <!-- ── TABS ─────────────────────────────────────── -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="tab('plan',this)">📋 Nutrition Plan</button>
+    <button class="tab-btn" onclick="tab('chat',this)">💬 Ask NutriBot</button>
+    <button class="tab-btn" onclick="tab('recipe',this)">🍽️ Recipe Finder</button>
+    <button class="tab-btn" onclick="tab('bmi',this)">⚖️ BMI Tool</button>
+    <button class="tab-btn" onclick="tab('about',this)">ℹ️ About</button>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       TAB 1 — NUTRITION PLAN
+  ════════════════════════════════════════════════ -->
+  <div id="tab-plan" class="tab-pane active">
+
+    <div class="info-banner">
+      ⚠️ Fill in your profile below. The more details you provide, the more personalised
+      your AI-generated nutrition plan will be. This is for informational purposes only.
+    </div>
+
+    <div class="card">
+      <div class="card-title">👤 Personal Profile</div>
+
+      <div class="grid-2">
+        <div class="fg">
+          <label>Full Name <span class="required-star">*</span></label>
+          <input type="text" id="p-name" placeholder="e.g. Priya Sharma"/>
+        </div>
+        <div class="fg">
+          <label>Age <span class="required-star">*</span></label>
+          <input type="number" id="p-age" min="1" max="120" placeholder="e.g. 34"/>
+        </div>
+        <div class="fg">
+          <label>Gender</label>
+          <select id="p-gender">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other / Prefer not to say</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Diet Preference <span class="required-star">*</span></label>
+          <select id="p-diet">
+            <option value="">-- Select --</option>
+            <option value="Vegetarian">🥦 Vegetarian</option>
+            <option value="Non-Vegetarian">🍗 Non-Vegetarian</option>
+            <option value="Vegan">🌱 Vegan</option>
+            <option value="Eggetarian">🥚 Eggetarian</option>
+            <option value="Pescatarian">🐟 Pescatarian</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Weight (kg)</label>
+          <input type="number" id="p-weight" min="20" max="300" placeholder="e.g. 68"/>
+        </div>
+        <div class="fg">
+          <label>Height (cm)</label>
+          <input type="number" id="p-height" min="100" max="250" placeholder="e.g. 165"/>
+        </div>
+        <div class="fg">
+          <label>Activity Level</label>
+          <select id="p-activity">
+            <option value="sedentary">🪑 Sedentary (little/no exercise)</option>
+            <option value="light">🚶 Light (1-3 days/week)</option>
+            <option value="moderate" selected>🏃 Moderate (3-5 days/week)</option>
+            <option value="active">💪 Active (6-7 days/week)</option>
+            <option value="very active">🏋️ Very Active (hard training)</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Health Goal</label>
+          <select id="p-goal">
+            <option value="General health">General health maintenance</option>
+            <option value="Weight loss">Weight loss</option>
+            <option value="Weight gain">Weight gain / Muscle building</option>
+            <option value="Diabetes management">Diabetes management</option>
+            <option value="Heart health">Heart health</option>
+            <option value="Improved energy">Improved energy &amp; focus</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>City <span class="required-star">*</span></label>
+          <input type="text" id="p-city" placeholder="e.g. Mumbai"/>
+        </div>
+        <div class="fg">
+          <label>Country <span class="required-star">*</span></label>
+          <input type="text" id="p-country" placeholder="e.g. India"/>
+        </div>
+        <div class="fg col-span">
+          <label>Medical History / Conditions</label>
+          <textarea id="p-medical" placeholder="e.g. Type 2 Diabetes, Hypertension, Hypothyroidism (leave blank if none)"></textarea>
+        </div>
+        <div class="fg col-span">
+          <label>Food Allergies / Intolerances</label>
+          <input type="text" id="p-allergies" placeholder="e.g. Lactose intolerant, Nut allergy (leave blank if none)"/>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="genBtn" onclick="generatePlan()">
+          <span class="spin" id="genSpin"></span>
+          <span id="genTxt">🌿 Generate My Nutrition Plan</span>
+        </button>
+        <button class="btn btn-secondary" onclick="clearPlanForm()">🔄 Clear</button>
+      </div>
+      <div id="planErr" class="alert err"></div>
+    </div><!-- /card -->
+
+    <!-- Output -->
+    <div id="planOutput" class="card output-card">
+      <!-- Stats row -->
+      <div class="stats-row" id="statsRow" style="display:none">
+        <div class="stat-box">
+          <div class="val" id="statBMI">—</div>
+          <div class="lbl">BMI</div>
+          <div class="sub" id="statBMICat">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="val" id="statTDEE">—</div>
+          <div class="lbl">Est. Daily Calories (TDEE)</div>
+          <div class="sub">kcal/day</div>
+        </div>
+        <div class="stat-box">
+          <div class="val" id="statGoal">—</div>
+          <div class="lbl">Health Goal</div>
+          <div class="sub" id="statDiet">—</div>
+        </div>
+      </div>
+
+      <div class="card-title">
+        📄 Your Personalized Nutrition Plan
+        <div class="btn-row" style="margin:0;margin-left:auto">
+          <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ Print</button>
+          <button class="btn btn-outline btn-sm" onclick="downloadPlan()">⬇️ Download</button>
+        </div>
+      </div>
+      <div id="planBody" class="output-body"></div>
+    </div>
+
+  </div><!-- /tab-plan -->
+
+  <!-- ════════════════════════════════════════════════
+       TAB 2 — CHAT
+  ════════════════════════════════════════════════ -->
+  <div id="tab-chat" class="tab-pane">
+    <div class="card">
+      <div class="card-title">💬 Ask NutriBot</div>
+      <p style="font-size:.86rem;color:#57606a;margin-bottom:12px">
+        NutriBot uses your profile (if generated) to personalise answers. Try one of the suggested questions or type your own.
+      </p>
+
+      <!-- Suggested questions -->
+      <div class="suggestions">
+        <button class="suggest-btn" onclick="setQ('What foods are good for managing blood pressure?')">🫀 Blood pressure foods</button>
+        <button class="suggest-btn" onclick="setQ('How much protein do I need per day?')">💪 Daily protein needs</button>
+        <button class="suggest-btn" onclick="setQ('What should a diabetic avoid eating?')">🩺 Diabetic diet tips</button>
+        <button class="suggest-btn" onclick="setQ('What are high-fiber foods I can eat daily?')">🥦 High-fiber foods</button>
+        <button class="suggest-btn" onclick="setQ('How can I lose weight without skipping meals?')">⚖️ Healthy weight loss</button>
+        <button class="suggest-btn" onclick="setQ('What are the best sources of iron for vegetarians?')">🌿 Iron for vegans</button>
+      </div>
+
+      <div class="chat-window" id="chatWin">
+        <div class="msg bot">
+          <div class="bot-tag">🤖 NutriBot</div>
+          Hello! I'm NutriBot, your AI-powered nutrition assistant. Generate your personalised plan first for context-aware answers, or ask me any nutrition question directly. How can I help? 🥗
+        </div>
+      </div>
+
+      <div class="chat-row">
+        <input type="text" id="chatIn" placeholder="Ask a nutrition question…" onkeydown="if(event.key==='Enter')sendQ()"/>
+        <button class="btn btn-primary" id="chatBtn" onclick="sendQ()">
+          <span class="spin" id="chatSpin"></span>
+          <span id="chatTxt">Send</span>
+        </button>
+      </div>
+    </div>
+  </div><!-- /tab-chat -->
+
+  <!-- ════════════════════════════════════════════════
+       TAB 3 — RECIPE FINDER
+  ════════════════════════════════════════════════ -->
+  <div id="tab-recipe" class="tab-pane">
+    <div class="card">
+      <div class="card-title">🍽️ Healthy Recipe Finder</div>
+      <p style="font-size:.86rem;color:#57606a;margin-bottom:16px">
+        Enter ingredients you have at home and NutriBot will suggest healthy, condition-aware recipes.
+      </p>
+      <div class="grid-2">
+        <div class="fg col-span">
+          <label>Ingredients you have <span class="required-star">*</span></label>
+          <textarea id="r-ing" placeholder="e.g. spinach, chickpeas, tomatoes, garlic, olive oil"></textarea>
+        </div>
+        <div class="fg">
+          <label>Diet Type</label>
+          <select id="r-diet">
+            <option value="">Any</option>
+            <option value="Vegetarian">Vegetarian</option>
+            <option value="Vegan">Vegan</option>
+            <option value="Non-Vegetarian">Non-Vegetarian</option>
+            <option value="Low-carb">Low-Carb</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Medical Condition to Consider</label>
+          <input type="text" id="r-cond" placeholder="e.g. Diabetes, High cholesterol"/>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="recipeBtn" onclick="findRecipe()">
+          <span class="spin" id="recipeSpin"></span>
+          <span id="recipeTxt">🔍 Find Recipes</span>
+        </button>
+      </div>
+      <div id="recipeErr" class="alert err"></div>
+      <div id="recipeOut" class="recipe-output">
+        <div id="recipeBody" class="output-body"></div>
+      </div>
+    </div>
+  </div><!-- /tab-recipe -->
+
+  <!-- ════════════════════════════════════════════════
+       TAB 4 — BMI TOOL
+  ════════════════════════════════════════════════ -->
+  <div id="tab-bmi" class="tab-pane">
+    <div class="card">
+      <div class="card-title">⚖️ BMI Calculator</div>
+      <div class="grid-2">
+        <div class="fg">
+          <label>Weight (kg) <span class="required-star">*</span></label>
+          <input type="number" id="b-weight" min="20" max="300" placeholder="e.g. 72"/>
+        </div>
+        <div class="fg">
+          <label>Height (cm) <span class="required-star">*</span></label>
+          <input type="number" id="b-height" min="100" max="250" placeholder="e.g. 170"/>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="calcBMI()">⚖️ Calculate BMI</button>
+      </div>
+      <div id="bmiErr" class="alert err"></div>
+
+      <div id="bmiResult" style="display:none;margin-top:18px">
+        <div style="font-size:3rem;font-weight:800;color:#145530;text-align:center" id="bmiVal">—</div>
+        <div style="text-align:center;margin-top:6px" id="bmiCatBadge"></div>
+        <div class="bmi-bar-wrap" style="margin-top:18px">
+          <div class="bmi-bar">
+            <div class="bmi-pointer" id="bmiPtr" style="left:0%"></div>
+          </div>
+          <div class="bmi-labels">
+            <span>Underweight<br/>&lt;18.5</span>
+            <span style="text-align:center">Normal<br/>18.5–25</span>
+            <span style="text-align:center">Overweight<br/>25–30</span>
+            <span style="text-align:right">Obese<br/>&gt;30</span>
+          </div>
+        </div>
+        <div id="bmiTip" style="margin-top:14px;padding:12px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:.88rem;color:#166534;line-height:1.6"></div>
+      </div>
+    </div>
+  </div><!-- /tab-bmi -->
+
+  <!-- ════════════════════════════════════════════════
+       TAB 5 — ABOUT
+  ════════════════════════════════════════════════ -->
+  <div id="tab-about" class="tab-pane">
+    <div class="card">
+      <div class="card-title">ℹ️ About NutriBot</div>
+      <p style="font-size:.93rem;line-height:1.8;margin-bottom:14px">
+        <strong>NutriBot</strong> is an <em>Agentic AI Nutrition Assistant</em> powered by
+        <strong>IBM Granite 13B LLM</strong> via <strong>IBM watsonx.ai</strong>. It collects
+        a detailed user profile and uses multiple built-in AI agents to generate evidence-based,
+        culturally aware, and medically considerate personalized nutrition plans.
+      </p>
+
+      <table class="about-table">
+        <tr><th>Component</th><th>Detail</th></tr>
+        <tr><td>🤖 AI Model</td><td>IBM Granite 13B Instruct v2 (<code>ibm/granite-13b-instruct-v2</code>)</td></tr>
+        <tr><td>☁️ Platform</td><td>IBM watsonx.ai — Sydney region (au-syd)</td></tr>
+        <tr><td>🧠 Agentic Tools</td><td>BMI Calculator · Calorie Estimator (Mifflin-St Jeor TDEE) · Recipe Finder · Q&amp;A Agent</td></tr>
+        <tr><td>🔒 Guardrails</td><td>Regex-based input &amp; output safety filtering on all endpoints</td></tr>
+        <tr><td>💡 HAM Principle</td><td>Helpful, Accurate, Mindful — enforced in every prompt</td></tr>
+        <tr><td>🌍 Cultural Sensitivity</td><td>Location-aware, locally relevant food suggestions</td></tr>
+        <tr><td>⚕️ Medical Safety</td><td>Condition-aware advice + mandatory legal medical disclaimer</td></tr>
+        <tr><td>🏗️ Framework</td><td>Python 3.x · Flask 3 · ibm-watsonx-ai SDK</td></tr>
+        <tr><td>🗂️ API Endpoints</td><td><code>POST /api/generate_plan</code> · <code>POST /api/query</code> · <code>POST /api/recipe</code> · <code>POST /api/bmi</code></td></tr>
+      </table>
+
+      <div class="card-title" style="margin-top:22px">🛡️ AI Ethics &amp; Guardrails</div>
+      <ul style="font-size:.9rem;line-height:2;padding-left:20px">
+        <li><strong>Input Guardrail</strong> — Regex scan on all user inputs before model call</li>
+        <li><strong>Output Guardrail</strong> — Regex scan on all model outputs before sending to user</li>
+        <li><strong>HAM Prompting</strong> — Every prompt instructs the model to be Helpful, Accurate, Mindful</li>
+        <li><strong>No Medication Advice</strong> — Prompts explicitly forbid advising users to stop medication</li>
+        <li><strong>Mandatory Disclaimer</strong> — Auto-appended to every nutrition plan</li>
+        <li><strong>Scope Limiting</strong> — Off-topic queries are politely redirected</li>
+        <li><strong>Input Validation</strong> — Server-side field validation &amp; type checking on all endpoints</li>
+      </ul>
+
+      <div class="disclaimer">
+        <strong>⚠️ Medical Disclaimer:</strong> NutriBot is an AI system for <strong>general informational
+        purposes only</strong>. The AI-generated nutrition plans and answers do NOT constitute medical advice,
+        diagnosis, or treatment. Always consult a qualified healthcare professional or registered dietitian
+        before making dietary changes, especially if you have existing medical conditions.
+        Never disregard professional medical advice based on AI-generated content.
+      </div>
+    </div>
+  </div><!-- /tab-about -->
+
+</div><!-- /container -->
+
+<script>
+/* ── State ──────────────────────────────────────────── */
+let userCtx = {};
+let planText = "";
+
+/* ── Tab switching ──────────────────────────────────── */
+function tab(id, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── Markdown → HTML ────────────────────────────────── */
+function md(t) {
+  return t
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^# (.+)$/gm,'<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/_(.+?)_/g,'<em>$1</em>')
+    .replace(/^---$/gm,'<hr/>')
+    .replace(/^- (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>[\s\S]+?<\/li>)+/g, m => '<ul>' + m + '</ul>')
+    .replace(/\n{2,}/g,'<br/><br/>')
+    .replace(/\n/g,'<br/>');
+}
+
+/* ── Helpers ────────────────────────────────────────── */
+function showAlert(id, msg, type='err') {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'alert ' + type;
+  el.style.display = 'block';
+}
+function hideAlert(id) { document.getElementById(id).style.display = 'none'; }
+
+function setLoading(btnId, spinId, txtId, label, loading) {
+  document.getElementById(btnId).disabled = loading;
+  document.getElementById(spinId).style.display = loading ? 'inline-block' : 'none';
+  document.getElementById(txtId).textContent = loading ? label : document.getElementById(txtId).dataset.orig || '';
+}
+
+/* ── Generate Nutrition Plan ────────────────────────── */
+async function generatePlan() {
+  hideAlert('planErr');
+
+  const name   = document.getElementById('p-name').value.trim();
+  const age    = document.getElementById('p-age').value.trim();
+  const diet   = document.getElementById('p-diet').value;
+  const city   = document.getElementById('p-city').value.trim();
+  const country= document.getElementById('p-country').value.trim();
+
+  if (!name)   return showAlert('planErr','Please enter your name.');
+  if (!age)    return showAlert('planErr','Please enter your age.');
+  if (!diet)   return showAlert('planErr','Please select a diet preference.');
+  if (!city)   return showAlert('planErr','Please enter your city.');
+  if (!country)return showAlert('planErr','Please enter your country.');
+
+  const payload = {
+    name, age, diet, city, country,
+    gender:         document.getElementById('p-gender').value,
+    weight:         document.getElementById('p-weight').value || null,
+    height:         document.getElementById('p-height').value || null,
+    activity:       document.getElementById('p-activity').value,
+    goal:           document.getElementById('p-goal').value,
+    medical_history:document.getElementById('p-medical').value.trim(),
+    allergies:      document.getElementById('p-allergies').value.trim(),
+  };
+
+  const genBtn = document.getElementById('genBtn');
+  const genSpin= document.getElementById('genSpin');
+  const genTxt = document.getElementById('genTxt');
+  genBtn.disabled = true;
+  genSpin.style.display = 'inline-block';
+  genTxt.textContent = 'Generating plan…';
+
+  try {
+    const res  = await fetch('/api/generate_plan', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      showAlert('planErr', data.error || 'Unexpected error. Please try again.');
+      return;
+    }
+
+    // Store context for chat
+    userCtx  = payload;
+    planText = data.plan;
+
+    // Stats row
+    if (data.bmi) {
+      document.getElementById('statBMI').textContent    = data.bmi;
+      document.getElementById('statBMICat').textContent = data.bmi_cat || '';
+      document.getElementById('statTDEE').textContent   = (data.tdee || '—').toLocaleString();
+      document.getElementById('statGoal').textContent   = payload.goal.split(' ')[0];
+      document.getElementById('statDiet').textContent   = payload.diet;
+      document.getElementById('statsRow').style.display = 'grid';
+    }
+
+    const out = document.getElementById('planOutput');
+    out.classList.add('visible');
+    document.getElementById('planBody').innerHTML = md(data.plan);
+    out.scrollIntoView({behavior:'smooth', block:'start'});
+
+  } catch(e) {
+    showAlert('planErr', 'Network error: ' + e.message);
+  } finally {
+    genBtn.disabled = false;
+    genSpin.style.display = 'none';
+    genTxt.textContent = '🌿 Generate My Nutrition Plan';
+  }
+}
+
+/* ── Clear form ─────────────────────────────────────── */
+function clearPlanForm() {
+  ['p-name','p-age','p-weight','p-height','p-city','p-country','p-medical','p-allergies']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('p-diet').value = '';
+  document.getElementById('planOutput').classList.remove('visible');
+  document.getElementById('statsRow').style.display = 'none';
+  hideAlert('planErr');
+  userCtx = {}; planText = '';
+}
+
+/* ── Download plan ──────────────────────────────────── */
+function downloadPlan() {
+  if (!planText) return;
+  const blob = new Blob([planText], {type:'text/plain'});
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'nutrition_plan_' + (userCtx.name || 'nutri').replace(/\s+/g,'_') + '.txt';
+  a.click();
+}
+
+/* ── Chat Q&A ───────────────────────────────────────── */
+function setQ(q) {
+  document.getElementById('chatIn').value = q;
+  // auto switch to chat tab
+  document.querySelectorAll('.tab-btn')[1].click();
+  document.getElementById('chatIn').focus();
+}
+
+async function sendQ() {
+  const inp = document.getElementById('chatIn');
+  const q   = inp.value.trim();
+  if (!q) return;
+  addMsg(q, 'user');
+  inp.value = '';
+
+  const cb  = document.getElementById('chatBtn');
+  const cs  = document.getElementById('chatSpin');
+  const ct  = document.getElementById('chatTxt');
+  cb.disabled = true;
+  cs.style.display = 'inline-block';
+  ct.textContent = '…';
+
+  // Typing indicator
+  const typing = addMsg('NutriBot is thinking…', 'typing');
+
+  try {
+    const res  = await fetch('/api/query', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({query: q, user_context: userCtx})
+    });
+    const data = await res.json();
+    typing.remove();
+    if (!res.ok || data.error) {
+      addMsg('⚠️ ' + (data.error || 'Something went wrong.'), 'bot');
+    } else {
+      addMsg(data.answer, 'bot');
+    }
+  } catch(e) {
+    typing.remove();
+    addMsg('⚠️ Network error: ' + e.message, 'bot');
+  } finally {
+    cb.disabled = false;
+    cs.style.display = 'none';
+    ct.textContent = 'Send';
+  }
+}
+
+function addMsg(text, role) {
+  const win = document.getElementById('chatWin');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  if (role === 'bot') {
+    div.innerHTML = '<div class="bot-tag">🤖 NutriBot</div>' + md(text);
+  } else if (role === 'typing') {
+    div.textContent = text;
+  } else {
+    div.textContent = text;
+  }
+  win.appendChild(div);
+  win.scrollTop = win.scrollHeight;
+  return div;
+}
+
+/* ── Recipe Finder ──────────────────────────────────── */
+async function findRecipe() {
+  hideAlert('recipeErr');
+  const ing = document.getElementById('r-ing').value.trim();
+  if (!ing) return showAlert('recipeErr', 'Please enter some ingredients.');
+
+  const rb  = document.getElementById('recipeBtn');
+  const rs  = document.getElementById('recipeSpin');
+  const rt  = document.getElementById('recipeTxt');
+  rb.disabled = true;
+  rs.style.display = 'inline-block';
+  rt.textContent = 'Finding recipes…';
+
+  try {
+    const res  = await fetch('/api/recipe', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        ingredients: ing,
+        diet:        document.getElementById('r-diet').value,
+        condition:   document.getElementById('r-cond').value.trim()
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      showAlert('recipeErr', data.error || 'Unexpected error.');
+      return;
+    }
+    const out = document.getElementById('recipeOut');
+    out.classList.add('visible');
+    document.getElementById('recipeBody').innerHTML = md(data.recipes);
+  } catch(e) {
+    showAlert('recipeErr', 'Network error: ' + e.message);
+  } finally {
+    rb.disabled = false;
+    rs.style.display = 'none';
+    rt.textContent = '🔍 Find Recipes';
+  }
+}
+
+/* ── BMI Calculator ─────────────────────────────────── */
+async function calcBMI() {
+  hideAlert('bmiErr');
+  const w = parseFloat(document.getElementById('b-weight').value);
+  const h = parseFloat(document.getElementById('b-height').value);
+  if (!w || !h || w<=0 || h<=0) return showAlert('bmiErr','Please enter valid weight and height.');
+
+  try {
+    const res  = await fetch('/api/bmi', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({weight:w, height:h})
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) return showAlert('bmiErr', data.error || 'Error.');
+
+    const bmi = data.bmi;
+    const cat = data.category;
+    document.getElementById('bmiResult').style.display = 'block';
+    document.getElementById('bmiVal').textContent = bmi;
+
+    // Badge
+    const badge = document.getElementById('bmiCatBadge');
+    const catClass = cat.toLowerCase().replace(' ','');
+    badge.innerHTML = `<span class="bmi-cat-badge ${catClass}">${cat}</span>`;
+
+    // Pointer position: map BMI 15–40 → 0–100%
+    const pct = Math.min(100, Math.max(0, ((bmi - 15) / 25) * 100));
+    document.getElementById('bmiPtr').style.left = pct + '%';
+
+    // Tip
+    const tips = {
+      'Underweight': 'Your BMI indicates you may be underweight. Consider increasing nutrient-dense food intake and consulting a dietitian.',
+      'Normal weight': 'Great! Your BMI is in the healthy range. Maintain your balanced diet and active lifestyle.',
+      'Overweight': 'Your BMI is slightly above the healthy range. Consider a balanced diet with moderate calorie reduction and regular exercise.',
+      'Obese': 'Your BMI indicates obesity. Please consult a healthcare professional or registered dietitian for a personalized weight management plan.'
+    };
+    document.getElementById('bmiTip').textContent = tips[cat] || '';
+  } catch(e) {
+    showAlert('bmiErr', 'Network error: ' + e.message);
+  }
+}
+</script>
+</body>
+</html>
